@@ -1,0 +1,8 @@
+.env
+build/
+.venv/
+
+infrastructure/terraform/.terraform/
+infrastructure/terraform/terraform.tfstate
+infrastructure/terraform/terraform.tfstate.*
+infrastructure/terraform/crash.log

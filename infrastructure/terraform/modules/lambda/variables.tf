@@ -1,0 +1,24 @@
+variable "reddit_client_id" {
+  description = "The client ID for authenticating with the Reddit API"
+  type        = string
+}
+
+variable "reddit_client_secret" {
+  description = "The client secret for authenticating with the Reddit API"
+  type        = string
+}
+
+variable "reddit_user_agent" {
+  description = "The user agent string required by Reddit API requests"
+  type        = string
+}
+
+variable "subreddit_name" {
+  description = "The subreddit to fetch posts from (default is 'all')"
+  type        = string
+  default     = "all"
+}
+variable "kinesis_stream_name" {
+  description = "Name of the Kinesis stream to push Reddit data to"
+  type        = string
+}
