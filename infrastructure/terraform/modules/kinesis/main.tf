@@ -41,73 +41,119 @@ resource "aws_iam_role_policy" "kda_policy" {
           "kinesis:GetRecords"
         ],
         Resource = aws_kinesis_stream.reddit_stream.arn
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "kinesis:PutRecord",
+          "kinesis:PutRecords",
+          "kinesis:DescribeStream"
+        ],
+        Resource = aws_kinesis_stream.kda_output_stream.arn
       }
     ]
   })
 }
 
 resource "aws_kinesisanalyticsv2_application" "reddit_analytics" {
-  name        = "reddit-analytics-app"
-  runtime_environment    = "SQL-1_0"
-  service_execution_role = aws_iam_role.kda_role.arn
+  name                   = "reddit-sql-analytics-app"
+  runtime_environment     = "SQL-1_0"
+  service_execution_role  = aws_iam_role.kda_role.arn
 
   application_configuration {
+    application_code_configuration {
+        code_content {
+          text_content = <<SQL
+      CREATE OR REPLACE STREAM "DESTINATION_SQL_STREAM" (
+        id VARCHAR(64),
+        title VARCHAR(256),
+        author VARCHAR(64),
+        created_utc BIGINT,
+        url VARCHAR(512),
+        score INTEGER,
+        num_comments INTEGER,
+        subreddit VARCHAR(64)
+      );
+
+      CREATE OR REPLACE PUMP "STREAM_PUMP" AS
+      INSERT INTO "DESTINATION_SQL_STREAM"
+      SELECT * FROM "SOURCE_SQL_STREAM_001" WHERE score > 0 OR num_comments > 0;
+      SQL
+          }
+          code_content_type = "PLAINTEXT"
+    }
+
     sql_application_configuration {
-      inputs {
-        name_prefix = "reddit_input"
-        kinesis_stream_input {
+      input {
+        name_prefix = "SourceStream"
+
+        kinesis_streams_input {
           resource_arn = aws_kinesis_stream.reddit_stream.arn
-          role_arn     = aws_iam_role.kda_role.arn
         }
 
         input_schema {
           record_format {
             record_format_type = "JSON"
+
+            mapping_parameters {
+              json_mapping_parameters {
+                record_row_path = "$"
+              }
+            }
           }
-          record_columns {
+
+          record_column {
             name     = "id"
             sql_type = "VARCHAR(64)"
             mapping  = "$.id"
           }
-          record_columns {
+          record_column {
             name     = "title"
             sql_type = "VARCHAR(256)"
             mapping  = "$.title"
           }
-          record_columns {
+          record_column {
             name     = "author"
             sql_type = "VARCHAR(64)"
             mapping  = "$.author"
           }
-          record_columns {
+          record_column {
             name     = "created_utc"
             sql_type = "BIGINT"
             mapping  = "$.created_utc"
           }
-          record_columns {
+          record_column {
             name     = "url"
             sql_type = "VARCHAR(512)"
             mapping  = "$.url"
           }
-          record_columns {
+          record_column {
             name     = "score"
             sql_type = "INTEGER"
             mapping  = "$.score"
           }
-          record_columns {
+          record_column {
             name     = "num_comments"
             sql_type = "INTEGER"
             mapping  = "$.num_comments"
           }
-          record_columns {
+          record_column {
             name     = "subreddit"
             sql_type = "VARCHAR(64)"
             mapping  = "$.subreddit"
           }
+        }
+      }
 
-          record_format {
-            record_format_type = "JSON"
-          }
+      output {
+        name = "OutputStream"
+
+        kinesis_streams_output {
+          resource_arn = aws_kinesis_stream.kda_output_stream.arn
+        }
+
+        destination_schema {
+          record_format_type = "JSON"
         }
       }
     }
