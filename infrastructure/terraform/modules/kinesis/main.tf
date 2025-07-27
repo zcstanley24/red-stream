@@ -44,6 +44,11 @@ resource "aws_iam_role_policy" "kda_policy" {
       },
       {
         Effect = "Allow",
+        Action = ["s3:GetObject"],
+        Resource = ["arn:aws:s3:::firehose-output-bucket-reddit-072625/*"]
+      },
+      {
+        Effect = "Allow",
         Action = [
           "kinesis:PutRecord",
           "kinesis:PutRecords",
@@ -56,105 +61,42 @@ resource "aws_iam_role_policy" "kda_policy" {
 }
 
 resource "aws_kinesisanalyticsv2_application" "reddit_analytics" {
-  name                   = "reddit-sql-analytics-app"
-  runtime_environment     = "SQL-1_0"
-  service_execution_role  = aws_iam_role.kda_role.arn
+  name                  = "reddit-flink-analytics-app"
+  runtime_environment   = "FLINK-1_13"
+  service_execution_role = aws_iam_role.kda_role.arn
 
   application_configuration {
     application_code_configuration {
-        code_content {
-          text_content = <<SQL
-      CREATE OR REPLACE STREAM "DESTINATION_SQL_STREAM" (
-        id VARCHAR(64),
-        title VARCHAR(256),
-        author VARCHAR(64),
-        created_utc BIGINT,
-        url VARCHAR(512),
-        score INTEGER,
-        num_comments INTEGER,
-        subreddit VARCHAR(64)
-      );
-
-      CREATE OR REPLACE PUMP "STREAM_PUMP" AS
-      INSERT INTO "DESTINATION_SQL_STREAM"
-      SELECT * FROM "SOURCE_SQL_STREAM_001" WHERE score > 0 OR num_comments > 0;
-      SQL
-          }
-          code_content_type = "PLAINTEXT"
-    }
-
-    sql_application_configuration {
-      input {
-        name_prefix = "SourceStream"
-
-        kinesis_streams_input {
-          resource_arn = aws_kinesis_stream.reddit_stream.arn
-        }
-
-        input_schema {
-          record_format {
-            record_format_type = "JSON"
-
-            mapping_parameters {
-              json_mapping_parameters {
-                record_row_path = "$"
-              }
-            }
-          }
-
-          record_column {
-            name     = "id"
-            sql_type = "VARCHAR(64)"
-            mapping  = "$.id"
-          }
-          record_column {
-            name     = "title"
-            sql_type = "VARCHAR(256)"
-            mapping  = "$.title"
-          }
-          record_column {
-            name     = "author"
-            sql_type = "VARCHAR(64)"
-            mapping  = "$.author"
-          }
-          record_column {
-            name     = "created_utc"
-            sql_type = "BIGINT"
-            mapping  = "$.created_utc"
-          }
-          record_column {
-            name     = "url"
-            sql_type = "VARCHAR(512)"
-            mapping  = "$.url"
-          }
-          record_column {
-            name     = "score"
-            sql_type = "INTEGER"
-            mapping  = "$.score"
-          }
-          record_column {
-            name     = "num_comments"
-            sql_type = "INTEGER"
-            mapping  = "$.num_comments"
-          }
-          record_column {
-            name     = "subreddit"
-            sql_type = "VARCHAR(64)"
-            mapping  = "$.subreddit"
-          }
+      code_content {
+        s3_content_location {
+          bucket_arn = aws_s3_bucket.firehose_bucket.arn
+          file_key   = "flink-apps/reddit-analytics.jar"
         }
       }
+      code_content_type = "ZIPFILE"
+    }
 
-      output {
-        name = "OutputStream"
-
-        kinesis_streams_output {
-          resource_arn = aws_kinesis_stream.kda_output_stream.arn
+    environment_properties {
+      property_group {
+        property_group_id = "FlinkApplicationProperties"
+        property_map = {
+          "INPUT_STREAM_ARN"  = aws_kinesis_stream.reddit_stream.arn
+          "OUTPUT_STREAM_ARN" = aws_kinesis_stream.kda_output_stream.arn
         }
+      }
+    }
 
-        destination_schema {
-          record_format_type = "JSON"
-        }
+    flink_application_configuration {
+      checkpoint_configuration {
+        configuration_type = "DEFAULT"
+      }
+
+      monitoring_configuration {
+        configuration_type = "DEFAULT"
+      }
+
+      parallelism_configuration {
+        configuration_type = "DEFAULT"
       }
     }
   }
@@ -171,11 +113,6 @@ resource "aws_kinesis_stream" "kda_output_stream" {
 
 resource "aws_s3_bucket" "firehose_bucket" {
   bucket = "firehose-output-bucket-reddit-072625"
-}
-
-resource "aws_s3_bucket_acl" "firehose_bucket_acl" {
-  bucket = aws_s3_bucket.firehose_bucket.id
-  acl    = "private"
 }
 
 resource "aws_iam_role" "firehose_role" {

@@ -29,6 +29,7 @@ def lambda_producer(_event, _context):
 		records = []
 
 		for submission in new_submissions:
+			display_name = submission.subreddit.display_name if submission.subreddit and submission.subreddit.display_name else 'unknown'
 			submission_payload = {
 				'id': submission.id,
 				'title': submission.title,
@@ -37,11 +38,11 @@ def lambda_producer(_event, _context):
 				'url': submission.url,
 				'score': submission.score,
 				'num_comments': submission.num_comments,
-				'subreddit': submission.subreddit.display_name,
+				'subreddit': display_name,
 			}
 			record = {
 				'Data': json.dumps(submission_payload).encode('utf-8'),
-				'PartitionKey': submission.subreddit.display_name
+				'PartitionKey': display_name,
 			}
 			records.append(record)
 

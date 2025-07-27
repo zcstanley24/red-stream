@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
 
@@ -37,12 +41,14 @@ resource "aws_iam_role_policy" "lambda_kinesis_policy" {
 
 resource "aws_lambda_function" "lambda_producer" {
   function_name = "lambda_producer"
-  filename      = "${path.module}/build/lambda_producer_payload.zip"
+  filename      = "${path.module}/lambda_producer_payload.zip"
   handler       = "lambda_producer.lambda_producer"
   runtime       = "python3.9"
   role          = aws_iam_role.lambda_exec_role.arn
   timeout       = 30
   memory_size   = 128
+
+  source_code_hash = filebase64sha256("modules/lambda/lambda_producer_payload.zip")
 
   environment {
     variables = {

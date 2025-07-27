@@ -22,6 +22,7 @@ if [ "$1" = "plan" ]; then
 elif [ "$1" = "apply" ]; then
   terraform init
   terraform apply
+  read -p "Press ENTER to exit..."
 else
   echo "Invalid argument: $1"
   echo "Usage: $0 plan|apply"
