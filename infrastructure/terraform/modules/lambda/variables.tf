@@ -18,7 +18,18 @@ variable "subreddit_name" {
   type        = string
   default     = "all"
 }
-variable "kinesis_stream_name" {
+
+variable "input_stream_name" {
   description = "Name of the Kinesis stream to push Reddit data to"
   type        = string
+}
+
+variable "input_stream_arn" {
+  description = "ARN of the Kinesis stream to push Reddit data to"
+  type        = string
+}
+
+variable "output_stream_arn" {
+  description = "ARN of the Kinesis stream to push filtered Reddit data to"
+  type = string
 }

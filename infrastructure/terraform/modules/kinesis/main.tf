@@ -3,109 +3,9 @@ provider "aws" {
 }
 
 resource "aws_kinesis_stream" "reddit_stream" {
-  name             = "reddit-data-stream"
+  name             = "reddit-input-stream"
   shard_count      = var.shard_count
   retention_period = var.retention_period
-  tags = {
-    Environment = var.environment
-  }
-}
-
-resource "aws_iam_role" "kda_role" {
-  name = "kda_role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "kinesisanalytics.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "kda_policy" {
-  name = "kda_policy"
-  role = aws_iam_role.kda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "kinesis:DescribeStream",
-          "kinesis:GetShardIterator",
-          "kinesis:GetRecords"
-        ],
-        Resource = aws_kinesis_stream.reddit_stream.arn
-      },
-      {
-        Effect = "Allow",
-        Action = ["s3:GetObject"],
-        Resource = ["arn:aws:s3:::firehose-output-bucket-reddit-072625/*"]
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "kinesis:PutRecord",
-          "kinesis:PutRecords",
-          "kinesis:DescribeStream"
-        ],
-        Resource = aws_kinesis_stream.kda_output_stream.arn
-      }
-    ]
-  })
-}
-
-resource "aws_kinesisanalyticsv2_application" "reddit_analytics" {
-  name                  = "reddit-flink-analytics-app"
-  runtime_environment   = "FLINK-1_13"
-  service_execution_role = aws_iam_role.kda_role.arn
-
-  application_configuration {
-    application_code_configuration {
-      code_content {
-        s3_content_location {
-          bucket_arn = aws_s3_bucket.firehose_bucket.arn
-          file_key   = "flink-apps/reddit-analytics.jar"
-        }
-      }
-      code_content_type = "ZIPFILE"
-    }
-
-    environment_properties {
-      property_group {
-        property_group_id = "FlinkApplicationProperties"
-        property_map = {
-          "INPUT_STREAM_ARN"  = aws_kinesis_stream.reddit_stream.arn
-          "OUTPUT_STREAM_ARN" = aws_kinesis_stream.kda_output_stream.arn
-        }
-      }
-    }
-
-    flink_application_configuration {
-      checkpoint_configuration {
-        configuration_type = "DEFAULT"
-      }
-
-      monitoring_configuration {
-        configuration_type = "DEFAULT"
-      }
-
-      parallelism_configuration {
-        configuration_type = "DEFAULT"
-      }
-    }
-  }
-}
-
-resource "aws_kinesis_stream" "kda_output_stream" {
-  name        = "reddit-kda-output-stream"
-  shard_count = 1
-  retention_period = 24
   tags = {
     Environment = var.environment
   }
@@ -161,11 +61,20 @@ resource "aws_iam_role_policy" "firehose_policy" {
           "kinesis:DescribeStream",
           "kinesis:GetShardIterator",
           "kinesis:GetRecords"
-        ]
-        Resource = aws_kinesis_stream.kda_output_stream.arn
+        ],
+        Resource = aws_kinesis_stream.output_stream.arn
       }
     ]
   })
+}
+
+resource "aws_kinesis_stream" "output_stream" {
+  name        = "reddit-output-stream"
+  shard_count = 1
+  retention_period = 24
+  tags = {
+    Environment = var.environment
+  }
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
@@ -173,7 +82,7 @@ resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
   destination = "extended_s3"
 
   kinesis_source_configuration {
-    kinesis_stream_arn = aws_kinesis_stream.kda_output_stream.arn
+    kinesis_stream_arn = aws_kinesis_stream.output_stream.arn
     role_arn           = aws_iam_role.firehose_role.arn
   }
 

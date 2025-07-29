@@ -2,6 +2,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
 
@@ -31,11 +33,34 @@ resource "aws_iam_role_policy" "lambda_kinesis_policy" {
     Statement = [{
       Effect = "Allow",
       Action = [
+        "kinesis:GetRecords",
+        "kinesis:GetShardIterator",
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
         "kinesis:PutRecord",
         "kinesis:PutRecords"
       ],
       Resource = "*"
     }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_firehose_policy" {
+  name = "lambda-firehose-access"
+  role = aws_iam_role.lambda_exec_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "firehose:PutRecord",
+          "firehose:PutRecordBatch"
+        ],
+        Resource = "arn:aws:firehose:us-east-1:${data.aws_caller_identity.current.account_id}:deliverystream/reddit-kda-firehose"
+      }
+    ]
   })
 }
 
@@ -56,7 +81,7 @@ resource "aws_lambda_function" "lambda_producer" {
       REDDIT_CLIENT_SECRET = var.reddit_client_secret
       REDDIT_USER_AGENT    = var.reddit_user_agent
       SUBREDDIT_NAME       = var.subreddit_name
-      KINESIS_STREAM_NAME  = var.kinesis_stream_name
+      INPUT_STREAM_NAME  = var.input_stream_name
     }
   }
 
@@ -69,4 +94,41 @@ resource "aws_lambda_function" "lambda_producer" {
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy.lambda_kinesis_policy
   ]
+}
+
+resource "aws_lambda_function" "lambda_transformer" {
+  function_name = "lambda_transformer"
+  filename      = "${path.module}/lambda_transformer_payload.zip"
+  handler       = "lambda_handler.lambda_handler"
+  runtime       = "python3.9"
+  role          = aws_iam_role.lambda_exec_role.arn
+  timeout       = 30
+  memory_size   = 128
+
+  source_code_hash = filebase64sha256("modules/lambda/lambda_transformer_payload.zip")
+
+  environment {
+    variables = {
+      OUTPUT_STREAM_NAME = var.output_stream_arn
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+
+  depends_on = [
+    aws_iam_role.lambda_exec_role,
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy.lambda_kinesis_policy,
+    aws_iam_role_policy.lambda_firehose_policy
+  ]
+}
+
+resource "aws_lambda_event_source_mapping" "kinesis_to_transformer" {
+  event_source_arn  = var.input_stream_arn
+  function_name     = aws_lambda_function.lambda_transformer.arn
+  starting_position = "LATEST"
+  batch_size        = 100
+  enabled           = true
 }
