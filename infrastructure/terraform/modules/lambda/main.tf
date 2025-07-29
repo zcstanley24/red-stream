@@ -45,25 +45,6 @@ resource "aws_iam_role_policy" "lambda_kinesis_policy" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_firehose_policy" {
-  name = "lambda-firehose-access"
-  role = aws_iam_role.lambda_exec_role.name
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "firehose:PutRecord",
-          "firehose:PutRecordBatch"
-        ],
-        Resource = "arn:aws:firehose:us-east-1:${data.aws_caller_identity.current.account_id}:deliverystream/reddit-kda-firehose"
-      }
-    ]
-  })
-}
-
 resource "aws_lambda_function" "lambda_producer" {
   function_name = "lambda_producer"
   filename      = "${path.module}/lambda_producer_payload.zip"
@@ -99,7 +80,7 @@ resource "aws_lambda_function" "lambda_producer" {
 resource "aws_lambda_function" "lambda_transformer" {
   function_name = "lambda_transformer"
   filename      = "${path.module}/lambda_transformer_payload.zip"
-  handler       = "lambda_handler.lambda_handler"
+  handler       = "lambda_transformer.lambda_handler"
   runtime       = "python3.9"
   role          = aws_iam_role.lambda_exec_role.arn
   timeout       = 30
@@ -109,7 +90,7 @@ resource "aws_lambda_function" "lambda_transformer" {
 
   environment {
     variables = {
-      OUTPUT_STREAM_NAME = var.output_stream_arn
+      OUTPUT_STREAM_NAME = var.output_stream_name
     }
   }
 
@@ -120,8 +101,7 @@ resource "aws_lambda_function" "lambda_transformer" {
   depends_on = [
     aws_iam_role.lambda_exec_role,
     aws_iam_role_policy_attachment.lambda_basic_execution,
-    aws_iam_role_policy.lambda_kinesis_policy,
-    aws_iam_role_policy.lambda_firehose_policy
+    aws_iam_role_policy.lambda_kinesis_policy
   ]
 }
 

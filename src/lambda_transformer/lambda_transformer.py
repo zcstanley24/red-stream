@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 if os.environ.get('AWS_EXECUTION_ENV') is None:
 	load_dotenv()
 
-firehose = boto3.client("firehose")
+kinesis_client = boto3.client('kinesis')
 OUTPUT_STREAM_NAME = os.environ["OUTPUT_STREAM_NAME"]
 
 def lambda_handler(event, context):
@@ -18,11 +18,10 @@ def lambda_handler(event, context):
       post = json.loads(payload)
 
       if post.get("num_comments", 0) > 0:
-        firehose.put_record(
-          DeliveryStreamName=OUTPUT_STREAM_NAME,
-          Record={
-            "Data": (json.dumps(post) + "\n").encode("utf-8")
-          }
+        kinesis_client.put_record(
+          StreamName=OUTPUT_STREAM_NAME,
+          Data=(json.dumps(post) + "\n").encode("utf-8"),
+          PartitionKey=str(post.get("subreddit", "default"))
         )
         filteredCount += 1
     except Exception as e:

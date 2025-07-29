@@ -14,5 +14,5 @@ module "lambda" {
   subreddit_name       = var.subreddit_name
   input_stream_name  = module.kinesis.input_stream_name
   input_stream_arn   = module.kinesis.input_stream_arn
-  output_stream_arn = module.kinesis.output_stream_arn
+  output_stream_name = module.kinesis.output_stream_name
 }
