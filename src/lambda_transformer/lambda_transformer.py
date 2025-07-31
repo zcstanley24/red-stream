@@ -1,4 +1,3 @@
-import base64
 import json
 import boto3
 import os
@@ -7,28 +6,48 @@ from dotenv import load_dotenv
 if os.environ.get('AWS_EXECUTION_ENV') is None:
 	load_dotenv()
 
-kinesis_client = boto3.client('kinesis')
+SAGEMAKER_ENDPOINT_NAME = os.environ["SAGEMAKER_ENDPOINT_NAME"]
 OUTPUT_STREAM_NAME = os.environ["OUTPUT_STREAM_NAME"]
 
+kinesis_client = boto3.client('kinesis')
+runtime = boto3.client("sagemaker-runtime")
+
 def lambda_handler(event, context):
-  filteredCount = 0
   for record in event["Records"]:
     try:
-      payload = base64.b64decode(record["kinesis"]["data"])
-      post = json.loads(payload)
+      payload = json.loads(record["kinesis"]["data"])
+      title = payload.get("title")
+      if not title:
+         continue
+      
+      body = json.dumps({ "inputs": title})
 
-      if post.get("num_comments", 0) > 0:
-        kinesis_client.put_record(
-          StreamName=OUTPUT_STREAM_NAME,
-          Data=(json.dumps(post) + "\n").encode("utf-8"),
-          PartitionKey=str(post.get("subreddit", "default"))
-        )
-        filteredCount += 1
+      response = runtime.invoke_endpoint(
+        EndpointName=SAGEMAKER_ENDPOINT_NAME,
+        ContentType="application/json",
+        Body=body
+      )
+
+      result = json.loads(response["Body"].read().decode("utf-8"))
+
+      output = {
+        "id": payload.get("id", "N/A"),
+        "title": title,
+        "sentiment": result.get("label", "unknown").lower(),
+        "confidence": result.get("score", 0),
+        "source": "lambda-sagemaker"
+      }
+
+      kinesis_client.put_record(
+        StreamName=SAGEMAKER_ENDPOINT_NAME,
+        PartitionKey="partition-key",
+        Data=json.dumps(output)
+      )
+
     except Exception as e:
       print(f"Record failed to process: {e}")
-      continue
 
   return {
     "statusCode": 200,
-    "body": f"Processed {len(event['Records'])} records. Sent {filteredCount} to Firehose."
+    "body": json.dumps("Processed batch successfully.")
   }

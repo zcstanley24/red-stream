@@ -33,3 +33,8 @@ variable "output_stream_name" {
   description = "Name of the Kinesis stream to push filtered Reddit data to"
   type = string
 }
+
+variable "sagemaker_endpoint_name" {
+  description = "Name of the SageMaker endpoint to send Reddit data for sentiment analysis"
+  type = string
+}

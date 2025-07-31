@@ -38,7 +38,8 @@ resource "aws_iam_role_policy" "lambda_kinesis_policy" {
         "kinesis:DescribeStream",
         "kinesis:ListStreams",
         "kinesis:PutRecord",
-        "kinesis:PutRecords"
+        "kinesis:PutRecords",
+        "sagemaker:InvokeEndpoint"
       ],
       Resource = "*"
     }]
@@ -109,6 +110,6 @@ resource "aws_lambda_event_source_mapping" "kinesis_to_transformer" {
   event_source_arn  = var.input_stream_arn
   function_name     = aws_lambda_function.lambda_transformer.arn
   starting_position = "LATEST"
-  batch_size        = 100
+  batch_size        = 10
   enabled           = true
 }

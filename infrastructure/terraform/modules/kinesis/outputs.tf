@@ -12,3 +12,8 @@ output "output_stream_name" {
   description = "The name of the Kinesis output stream"
   value = aws_kinesis_stream.output_stream.name
 }
+
+output "output_stream_arn" {
+  description = "The ARN of the Kinesis output stream"
+  value = aws_kinesis_stream.output_stream.arn
+}

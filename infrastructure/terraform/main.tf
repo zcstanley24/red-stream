@@ -15,4 +15,12 @@ module "lambda" {
   input_stream_name  = module.kinesis.input_stream_name
   input_stream_arn   = module.kinesis.input_stream_arn
   output_stream_name = module.kinesis.output_stream_name
+  sagemaker_endpoint_name = module.eventbridge.sagemaker_endpoint_name
+}
+
+module "eventbridge" {
+  source = "./modules/eventbridge"
+
+  input_stream_arn   = module.kinesis.input_stream_arn
+  output_stream_arn   = module.kinesis.output_stream_arn
 }
