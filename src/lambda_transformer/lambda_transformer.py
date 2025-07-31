@@ -1,3 +1,4 @@
+import base64
 import json
 import boto3
 import os
@@ -15,7 +16,8 @@ runtime = boto3.client("sagemaker-runtime")
 def lambda_handler(event, context):
   for record in event["Records"]:
     try:
-      payload = json.loads(record["kinesis"]["data"])
+      raw_data = base64.b64decode(record["kinesis"]["data"])
+      payload = json.loads(raw_data)
       title = payload.get("title")
       if not title:
          continue
@@ -29,17 +31,18 @@ def lambda_handler(event, context):
       )
 
       result = json.loads(response["Body"].read().decode("utf-8"))
+      result_payload = result[0] if isinstance(result, list) and result else {}
 
       output = {
         "id": payload.get("id", "N/A"),
         "title": title,
-        "sentiment": result.get("label", "unknown").lower(),
-        "confidence": result.get("score", 0),
+        "sentiment": result_payload.get("label", "unknown").lower(),
+        "confidence": result_payload.get("score", 0),
         "source": "lambda-sagemaker"
       }
 
       kinesis_client.put_record(
-        StreamName=SAGEMAKER_ENDPOINT_NAME,
+        StreamName=OUTPUT_STREAM_NAME,
         PartitionKey="partition-key",
         Data=json.dumps(output)
       )

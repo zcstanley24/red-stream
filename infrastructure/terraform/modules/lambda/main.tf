@@ -92,6 +92,7 @@ resource "aws_lambda_function" "lambda_transformer" {
   environment {
     variables = {
       OUTPUT_STREAM_NAME = var.output_stream_name
+      SAGEMAKER_ENDPOINT_NAME = var.sagemaker_endpoint_name
     }
   }
 

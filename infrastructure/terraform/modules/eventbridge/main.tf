@@ -60,10 +60,8 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
     filter_criteria {
       filter {
         pattern = jsonencode({
-          data = {
-            num_comments = [{ "numeric": [">", 0] }],
-            author = [{ "anything-but": "[deleted]" }]
-          }
+          num_comments = [{ "numeric": [">", 0] }],
+          author = [{ "anything-but": "[deleted]" }]
         })
       }
     }
@@ -77,8 +75,14 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
 
     input_template = jsonencode({
       "source": "eventbridge-pipe",
-      "id": "<$.data.id>",
-      "title": "<$.data.title>",
+      "id":       "<$.id>",
+      "title":    "<$.title>",
+      "author":   "<$.author>",
+      "created_utc": "<$.created_utc>",
+      "url":        "<$.url>",
+      "score":      "<$.score>",
+      "num_comments": "<$.num_comments>",
+      "subreddit":  "<$.subreddit>"
     })
   }
 

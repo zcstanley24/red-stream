@@ -78,7 +78,7 @@ resource "aws_kinesis_stream" "output_stream" {
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
-  name        = "reddit-kda-firehose"
+  name        = "reddit-output-firehose"
   destination = "extended_s3"
 
   kinesis_source_configuration {
