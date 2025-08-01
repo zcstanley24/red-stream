@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_iam_role" "eventbridge_pipe_role" {
-  name = "eventbridge-pipe-sagemaker-role"
+  name = "eventbridge-pipe-exec-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -55,14 +55,21 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
   source = var.input_stream_arn
   source_parameters {
     kinesis_stream_parameters {
-      starting_position = "LATEST"
+      starting_position = "TRIM_HORIZON"
+      batch_size = 10
+      maximum_batching_window_in_seconds = 5
     }
+    
     filter_criteria {
       filter {
-        pattern = jsonencode({
-          num_comments = [{ "numeric": [">", 0] }],
-          author = [{ "anything-but": "[deleted]" }]
-        })
+        pattern = <<EOT
+        {
+          "data": {
+            "num_comments": [{ "numeric": [">", 0] }],
+            "author": [{ "anything-but": "[deleted]" }]
+          }
+        }
+        EOT
       }
     }
   }
@@ -73,18 +80,20 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
       partition_key = "reddit"
     }
 
-    input_template = jsonencode({
+    input_template = <<EOT
+    {
       "source": "eventbridge-pipe",
-      "id":       "<$.id>",
-      "title":    "<$.title>",
-      "author":   "<$.author>",
-      "created_utc": "<$.created_utc>",
-      "url":        "<$.url>",
-      "score":      "<$.score>",
-      "num_comments": "<$.num_comments>",
-      "subreddit":  "<$.subreddit>"
-    })
-  }
+      "id": "<$.data.id>",
+      "title": "<$.data.title>",
+      "author": "<$.data.author>",
+      "created_utc": "<$.data.created_utc>",
+      "url": "<$.data.url>",
+      "score": "<$.data.score>",
+      "num_comments": "<$.data.num_comments>",
+      "subreddit": "<$.data.subreddit>"
+    }
+    EOT
+    }
 
   depends_on = [aws_iam_role_policy.eventbridge_pipe_policy]
 }
