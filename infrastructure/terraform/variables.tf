@@ -12,9 +12,3 @@ variable "reddit_user_agent" {
   type        = string
   description = "User agent for Reddit API"
 }
-
-variable "subreddit_name" {
-  type        = string
-  description = "Subreddit to pull data from"
-  default     = "all"
-}

@@ -6,7 +6,6 @@ set +a
 export TF_VAR_reddit_client_id="$REDDIT_CLIENT_ID"
 export TF_VAR_reddit_client_secret="$REDDIT_CLIENT_SECRET"
 export TF_VAR_reddit_user_agent="$REDDIT_USER_AGENT"
-export TF_VAR_subreddit_name="$SUBREDDIT_NAME"
 
 cd infrastructure/terraform
 

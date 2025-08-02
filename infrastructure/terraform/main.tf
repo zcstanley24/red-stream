@@ -1,8 +1,5 @@
 module "kinesis" {
   source           = "./modules/kinesis"
-  shard_count      = 1
-  retention_period = 24
-  environment      = "dev"
 }
 
 module "lambda" {
@@ -23,4 +20,10 @@ module "eventbridge" {
 
   input_stream_arn   = module.kinesis.input_stream_arn
   output_stream_arn   = module.kinesis.output_stream_arn
+}
+
+module "athena" {
+  source = "./modules/athena"
+
+  s3_bucket_name    = module.kinesis.s3_bucket_name
 }

@@ -17,3 +17,8 @@ output "output_stream_arn" {
   description = "The ARN of the Kinesis output stream"
   value = aws_kinesis_stream.output_stream.arn
 }
+
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket with processed and partitioned reddit data"
+  value = aws_s3_bucket.firehose_bucket.bucket
+}

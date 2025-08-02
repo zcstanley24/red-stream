@@ -2,17 +2,16 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_kinesis_stream" "reddit_stream" {
   name             = "reddit-input-stream"
-  shard_count      = var.shard_count
-  retention_period = var.retention_period
-  tags = {
-    Environment = var.environment
-  }
+  shard_count      = 1
+  retention_period = 24
 }
 
 resource "aws_s3_bucket" "firehose_bucket" {
-  bucket = "firehose-output-bucket-reddit-072625"
+  bucket = "firehose-output-bucket-reddit-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_iam_role" "firehose_role" {
@@ -72,9 +71,6 @@ resource "aws_kinesis_stream" "output_stream" {
   name        = "reddit-output-stream"
   shard_count = 1
   retention_period = 24
-  tags = {
-    Environment = var.environment
-  }
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
@@ -90,7 +86,28 @@ resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
     role_arn           = aws_iam_role.firehose_role.arn
     bucket_arn         = aws_s3_bucket.firehose_bucket.arn
     buffering_interval = 60
-    buffering_size     = 5
+    buffering_size     = 64
     compression_format = "UNCOMPRESSED"
+    prefix = "source=!{partitionKeyFromQuery:source}/"
+    error_output_prefix = "errors/"
+
+    dynamic_partitioning_configuration {
+      enabled = true
+    }
+    
+    processing_configuration {
+      enabled = true
+      processors {
+        type = "MetadataExtraction"
+        parameters {
+          parameter_name  = "MetadataExtractionQuery"
+          parameter_value = "{source:.source}"
+        }
+        parameters {
+          parameter_name  = "JsonParsingEngine"
+          parameter_value = "JQ-1.6"
+        }
+      }
+    }
   }
 }

@@ -2,6 +2,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "eventbridge_pipe_role" {
   name = "eventbridge-pipe-exec-role"
 
@@ -45,8 +47,6 @@ resource "aws_iam_role_policy" "eventbridge_pipe_policy" {
     ]
   })
 }
-
-data "aws_caller_identity" "current" {}
 
 resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
   name     = "reddit-filtered-to-output-stream"

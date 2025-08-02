@@ -2,8 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-data "aws_caller_identity" "current" {}
-
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
 
@@ -67,10 +65,6 @@ resource "aws_lambda_function" "lambda_producer" {
     }
   }
 
-  tags = {
-    Environment = "dev"
-  }
-
   depends_on = [
     aws_iam_role.lambda_exec_role,
     aws_iam_role_policy_attachment.lambda_basic_execution,
@@ -94,10 +88,6 @@ resource "aws_lambda_function" "lambda_transformer" {
       OUTPUT_STREAM_NAME = var.output_stream_name
       SAGEMAKER_ENDPOINT_NAME = var.sagemaker_endpoint_name
     }
-  }
-
-  tags = {
-    Environment = "dev"
   }
 
   depends_on = [
