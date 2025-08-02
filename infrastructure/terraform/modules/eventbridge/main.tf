@@ -80,18 +80,8 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
       partition_key = "reddit"
     }
 
-    input_template = <<EOT
-    {
-      "source": "eventbridge-pipe",
-      "id": "<$.data.id>",
-      "title": "<$.data.title>",
-      "author": "<$.data.author>",
-      "created_utc": "<$.data.created_utc>",
-      "url": "<$.data.url>",
-      "score": "<$.data.score>",
-      "num_comments": "<$.data.num_comments>",
-      "subreddit": "<$.data.subreddit>"
-    }
+    input_template = <<-EOT
+    {"source": "eventbridge-pipe", "id": "<$.data.id>", "title": "<$.data.title>", "author": "<$.data.author>", "created_utc": "<$.data.created_utc>", "url": "<$.data.url>", "score": "<$.data.score>", "num_comments": "<$.data.num_comments>", "subreddit": "<$.data.subreddit>"}
     EOT
     }
 

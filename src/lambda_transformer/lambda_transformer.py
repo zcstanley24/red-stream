@@ -44,7 +44,7 @@ def lambda_handler(event, context):
       kinesis_client.put_record(
         StreamName=OUTPUT_STREAM_NAME,
         PartitionKey="partition-key",
-        Data=json.dumps(output)
+        Data=json.dumps(output) + "\n"
       )
 
     except Exception as e:
