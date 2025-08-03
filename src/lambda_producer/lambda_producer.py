@@ -10,7 +10,6 @@ if os.environ.get('AWS_EXECUTION_ENV') is None:
 REDDIT_CLIENT_ID = os.environ['REDDIT_CLIENT_ID']
 REDDIT_CLIENT_SECRET = os.environ['REDDIT_CLIENT_SECRET']
 REDDIT_USER_AGENT = os.environ.get('REDDIT_USER_AGENT')
-SUBREDDIT_NAME = os.environ.get('SUBREDDIT_NAME', 'all')
 INPUT_STREAM_NAME = os.environ['INPUT_STREAM_NAME']
 
 kinesis_client = boto3.client('kinesis')
@@ -23,8 +22,8 @@ reddit = praw.Reddit(
 
 def lambda_producer(_event, _context):
 	try:
-		subreddit = reddit.subreddit(SUBREDDIT_NAME)
-		new_submissions = subreddit.new(limit=10)
+		subreddit = reddit.subreddit('all')
+		new_submissions = subreddit.hot(limit=20)
 
 		records = []
 

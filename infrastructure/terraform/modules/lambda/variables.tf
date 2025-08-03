@@ -13,12 +13,6 @@ variable "reddit_user_agent" {
   type        = string
 }
 
-variable "subreddit_name" {
-  description = "The subreddit to fetch posts from (default is 'all')"
-  type        = string
-  default     = "all"
-}
-
 variable "input_stream_name" {
   description = "Name of the Kinesis stream to push Reddit data to"
   type        = string

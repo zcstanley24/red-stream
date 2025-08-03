@@ -60,7 +60,6 @@ resource "aws_lambda_function" "lambda_producer" {
       REDDIT_CLIENT_ID     = var.reddit_client_id
       REDDIT_CLIENT_SECRET = var.reddit_client_secret
       REDDIT_USER_AGENT    = var.reddit_user_agent
-      SUBREDDIT_NAME       = var.subreddit_name
       INPUT_STREAM_NAME  = var.input_stream_name
     }
   }

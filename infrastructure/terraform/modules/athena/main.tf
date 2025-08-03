@@ -109,3 +109,37 @@ resource "aws_glue_catalog_table" "eventbridge_pipe_table" {
     typeOfData     = "file"
   }
 }
+
+resource "aws_athena_named_query" "reddit_joined_view" {
+  name      = "reddit_sentiment_joined_view"
+  database  = aws_athena_database.reddit_db.name
+  query     = <<EOF
+CREATE OR REPLACE VIEW reddit_joined_view AS
+SELECT 
+  e.id,
+  e.title,
+  e.author,
+  from_unixtime(CAST(e.created_utc AS double)) AS created_time,
+  e.url,
+  e.score,
+  e.num_comments,
+  e.subreddit,
+  s.sentiment,
+  s.confidence
+FROM (
+  SELECT
+    *, 
+    ROW_NUMBER() OVER (PARTITION BY id ORDER BY created_utc DESC) AS rn
+  FROM ${aws_glue_catalog_table.eventbridge_pipe_table.name}
+) e
+INNER JOIN (
+  SELECT
+    id,
+    first_value(sentiment) OVER (PARTITION BY id ORDER BY confidence DESC) AS sentiment,
+    first_value(confidence) OVER (PARTITION BY id ORDER BY confidence DESC) AS confidence
+  FROM ${aws_glue_catalog_table.lambda_sagemaker_table.name}
+  GROUP BY id, sentiment, confidence
+) s ON e.id = s.id
+WHERE e.rn = 1
+EOF
+}

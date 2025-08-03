@@ -65,7 +65,7 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
         pattern = <<EOT
         {
           "data": {
-            "num_comments": [{ "numeric": [">", 0] }],
+            "num_comments": [{ "numeric": [">", 10] }],
             "author": [{ "anything-but": "[deleted]" }]
           }
         }
@@ -81,7 +81,7 @@ resource "aws_pipes_pipe" "reddit_filtered_to_output_stream" {
     }
 
     input_template = <<-EOT
-    {"source": "eventbridge-pipe", "id": "<$.data.id>", "title": "<$.data.title>", "author": "<$.data.author>", "created_utc": "<$.data.created_utc>", "url": "<$.data.url>", "score": "<$.data.score>", "num_comments": "<$.data.num_comments>", "subreddit": "<$.data.subreddit>"}
+    {"source": "eventbridge-pipe", "id": "<$.data.id>", "title": "<$.data.title>", "author": "<$.data.author>", "created_utc": "<$.data.created_utc>", "url": "<$.data.url>", "score": "<$.data.score>", "num_comments": <$.data.num_comments>, "subreddit": "<$.data.subreddit>"}
     EOT
     }
 

@@ -13,7 +13,7 @@ OUTPUT_STREAM_NAME = os.environ["OUTPUT_STREAM_NAME"]
 kinesis_client = boto3.client('kinesis')
 runtime = boto3.client("sagemaker-runtime")
 
-def lambda_handler(event, context):
+def lambda_handler(event, _context):
   for record in event["Records"]:
     try:
       raw_data = base64.b64decode(record["kinesis"]["data"])
