@@ -60,7 +60,7 @@ resource "aws_lambda_function" "lambda_producer" {
       REDDIT_CLIENT_ID     = var.reddit_client_id
       REDDIT_CLIENT_SECRET = var.reddit_client_secret
       REDDIT_USER_AGENT    = var.reddit_user_agent
-      INPUT_STREAM_NAME  = var.input_stream_name
+      INPUT_STREAM_NAME    = var.input_stream_name
     }
   }
 
@@ -69,6 +69,26 @@ resource "aws_lambda_function" "lambda_producer" {
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy.lambda_kinesis_policy
   ]
+}
+
+resource "aws_cloudwatch_event_rule" "lambda_producer_schedule" {
+  name                = "lambda-producer-schedule"
+  description         = "Runs lambda_producer every 5 minutes"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "lambda_producer_target" {
+  rule      = aws_cloudwatch_event_rule.lambda_producer_schedule.name
+  target_id = "lambda_producer"
+  arn       = aws_lambda_function.lambda_producer.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_to_invoke_lambda_producer" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_producer.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.lambda_producer_schedule.arn
 }
 
 resource "aws_lambda_function" "lambda_transformer" {

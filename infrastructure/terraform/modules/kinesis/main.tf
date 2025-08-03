@@ -68,8 +68,8 @@ resource "aws_iam_role_policy" "firehose_policy" {
 }
 
 resource "aws_kinesis_stream" "output_stream" {
-  name        = "reddit-output-stream"
-  shard_count = 1
+  name             = "reddit-output-stream"
+  shard_count      = 1
   retention_period = 24
 }
 
@@ -83,12 +83,12 @@ resource "aws_kinesis_firehose_delivery_stream" "reddit_firehose" {
   }
 
   extended_s3_configuration {
-    role_arn           = aws_iam_role.firehose_role.arn
-    bucket_arn         = aws_s3_bucket.firehose_bucket.arn
-    buffering_interval = 60
-    buffering_size     = 64
-    compression_format = "UNCOMPRESSED"
-    prefix = "source=!{partitionKeyFromQuery:source}/"
+    role_arn            = aws_iam_role.firehose_role.arn
+    bucket_arn          = aws_s3_bucket.firehose_bucket.arn
+    buffering_interval  = 60
+    buffering_size      = 64
+    compression_format  = "UNCOMPRESSED"
+    prefix              = "source=!{partitionKeyFromQuery:source}/"
     error_output_prefix = "errors/"
 
     dynamic_partitioning_configuration {

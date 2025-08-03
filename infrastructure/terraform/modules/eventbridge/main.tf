@@ -132,8 +132,8 @@ resource "aws_sagemaker_endpoint_configuration" "sentiment_config" {
     variant_name           = "AllTraffic"
     model_name             = aws_sagemaker_model.sentiment_model.name
     serverless_config {
-      memory_size_in_mb = 1024
-      max_concurrency   = 1
+      memory_size_in_mb    = 1024
+      max_concurrency      = 1
     }
   }
 }
